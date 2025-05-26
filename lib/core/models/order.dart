@@ -16,6 +16,7 @@ class Order {
   final DateTime createdAt;
   final DateTime? completedAt;
   final bool synced;
+  final String? notes;
 
   Order({
     required this.id,
@@ -30,6 +31,7 @@ class Order {
     required this.createdAt,
     this.completedAt,
     this.synced = false,
+    this.notes,
   });
 
   factory Order.fromJson(Map<String, dynamic> json) => _$OrderFromJson(json);
@@ -48,6 +50,7 @@ class Order {
     DateTime? createdAt,
     DateTime? completedAt,
     bool? synced,
+    String? notes,
   }) {
     return Order(
       id: id ?? this.id,
@@ -62,6 +65,7 @@ class Order {
       createdAt: createdAt ?? this.createdAt,
       completedAt: completedAt ?? this.completedAt,
       synced: synced ?? this.synced,
+      notes: notes ?? this.notes,
     );
   }
 }
@@ -85,6 +89,22 @@ class OrderItem {
   factory OrderItem.fromJson(Map<String, dynamic> json) =>
       _$OrderItemFromJson(json);
   Map<String, dynamic> toJson() => _$OrderItemToJson(this);
+
+  OrderItem copyWith({
+    String? productId,
+    String? productName,
+    double? price,
+    int? quantity,
+    double? subtotal,
+  }) {
+    return OrderItem(
+      productId: productId ?? this.productId,
+      productName: productName ?? this.productName,
+      price: price ?? this.price,
+      quantity: quantity ?? this.quantity,
+      subtotal: subtotal ?? this.subtotal,
+    );
+  }
 }
 
 enum OrderStatus {

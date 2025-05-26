@@ -23,12 +23,26 @@ class CreateOrder extends OrdersEvent {
   List<Object> get props => [order];
 }
 
+class UpdateOrder extends OrdersEvent {
+  final Order order;
+  const UpdateOrder(this.order);
+  @override
+  List<Object> get props => [order];
+}
+
 class UpdateOrderStatus extends OrdersEvent {
   final String orderId;
   final OrderStatus status;
   const UpdateOrderStatus(this.orderId, this.status);
   @override
   List<Object> get props => [orderId, status];
+}
+
+class DeleteOrder extends OrdersEvent {
+  final String orderId;
+  const DeleteOrder(this.orderId);
+  @override
+  List<Object> get props => [orderId];
 }
 
 class SyncOrders extends OrdersEvent {}
@@ -46,14 +60,24 @@ class OrdersLoading extends OrdersState {}
 
 class OrdersLoaded extends OrdersState {
   final List<Order> orders;
-  const OrdersLoaded(this.orders);
+  final Map<String, dynamic>? statistics;
+
+  const OrdersLoaded(this.orders, {this.statistics});
+
   @override
-  List<Object> get props => [orders];
+  List<Object> get props => [orders, statistics ?? {}];
 }
 
 class OrdersError extends OrdersState {
   final String message;
   const OrdersError(this.message);
+  @override
+  List<Object> get props => [message];
+}
+
+class OrderOperationSuccess extends OrdersState {
+  final String message;
+  const OrderOperationSuccess(this.message);
   @override
   List<Object> get props => [message];
 }
@@ -66,7 +90,9 @@ class OrdersBloc extends Bloc<OrdersEvent, OrdersState> {
   OrdersBloc(this._databaseHelper, this._apiService) : super(OrdersInitial()) {
     on<LoadOrders>(_onLoadOrders);
     on<CreateOrder>(_onCreateOrder);
+    on<UpdateOrder>(_onUpdateOrder);
     on<UpdateOrderStatus>(_onUpdateOrderStatus);
+    on<DeleteOrder>(_onDeleteOrder);
     on<SyncOrders>(_onSyncOrders);
   }
 
@@ -77,7 +103,8 @@ class OrdersBloc extends Bloc<OrdersEvent, OrdersState> {
     emit(OrdersLoading());
     try {
       final orders = await _databaseHelper.getOrders();
-      emit(OrdersLoaded(orders));
+      final statistics = await _databaseHelper.getOrderStatistics();
+      emit(OrdersLoaded(orders, statistics: statistics));
     } catch (e) {
       emit(OrdersError('Error al cargar pedidos: $e'));
     }
@@ -89,14 +116,34 @@ class OrdersBloc extends Bloc<OrdersEvent, OrdersState> {
   ) async {
     try {
       final orderWithId = event.order.copyWith(
-        id: const Uuid().v4(),
+        id: event.order.id.isEmpty ? const Uuid().v4() : event.order.id,
         createdAt: DateTime.now(),
       );
 
       await _databaseHelper.insertOrder(orderWithId);
+
+      // Eliminar el borrador si existe
+      if (event.order.id.isNotEmpty) {
+        await _databaseHelper.deleteDraftOrder(event.order.id);
+      }
+
+      emit(const OrderOperationSuccess('Pedido creado exitosamente'));
       add(LoadOrders());
     } catch (e) {
       emit(OrdersError('Error al crear pedido: $e'));
+    }
+  }
+
+  Future<void> _onUpdateOrder(
+    UpdateOrder event,
+    Emitter<OrdersState> emit,
+  ) async {
+    try {
+      await _databaseHelper.updateOrder(event.order);
+      emit(const OrderOperationSuccess('Pedido actualizado exitosamente'));
+      add(LoadOrders());
+    } catch (e) {
+      emit(OrdersError('Error al actualizar pedido: $e'));
     }
   }
 
@@ -106,9 +153,41 @@ class OrdersBloc extends Bloc<OrdersEvent, OrdersState> {
   ) async {
     try {
       await _databaseHelper.updateOrderStatus(event.orderId, event.status);
+
+      String message;
+      switch (event.status) {
+        case OrderStatus.completed:
+          message = 'Pedido completado';
+          break;
+        case OrderStatus.cancelled:
+          message = 'Pedido cancelado';
+          break;
+        case OrderStatus.inProgress:
+          message = 'Pedido en progreso';
+          break;
+        default:
+          message = 'Estado actualizado';
+      }
+
+      emit(OrderOperationSuccess(message));
       add(LoadOrders());
     } catch (e) {
-      emit(OrdersError('Error al actualizar pedido: $e'));
+      emit(OrdersError('Error al actualizar estado: $e'));
+    }
+  }
+
+  Future<void> _onDeleteOrder(
+    DeleteOrder event,
+    Emitter<OrdersState> emit,
+  ) async {
+    try {
+      final db = await _databaseHelper.database;
+      await db.delete('orders', where: 'id = ?', whereArgs: [event.orderId]);
+
+      emit(const OrderOperationSuccess('Pedido eliminado'));
+      add(LoadOrders());
+    } catch (e) {
+      emit(OrdersError('Error al eliminar pedido: $e'));
     }
   }
 
@@ -119,13 +198,25 @@ class OrdersBloc extends Bloc<OrdersEvent, OrdersState> {
     try {
       final unsyncedOrders = await _databaseHelper.getUnsyncedOrders();
 
+      int syncedCount = 0;
       for (Order order in unsyncedOrders) {
         try {
           await _apiService.syncOrder(order);
           await _databaseHelper.markOrderAsSynced(order.id);
+          syncedCount++;
         } catch (e) {
           print('Error sincronizando pedido ${order.id}: $e');
         }
+      }
+
+      if (syncedCount > 0) {
+        emit(OrderOperationSuccess('$syncedCount pedidos sincronizados'));
+      } else if (unsyncedOrders.isEmpty) {
+        emit(
+          const OrderOperationSuccess('Todos los pedidos están sincronizados'),
+        );
+      } else {
+        emit(const OrdersError('Error al sincronizar algunos pedidos'));
       }
 
       add(LoadOrders());

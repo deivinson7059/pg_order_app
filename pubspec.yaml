@@ -1,14 +1,12 @@
 name: pg_order_app
 description: "Aplicación para gestión de pedidos en ruta"
 
-
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: 'none'
 
 version: 1.0.0+1
 
 environment:
   sdk: ^3.8.0
-
 
 dependencies:
   flutter:
@@ -17,6 +15,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   equatable: ^2.0.5
   get_it: ^7.6.4
+  
   # Gestión de estados
   bloc: ^9.0.0
   flutter_bloc: ^9.1.1
@@ -47,6 +46,7 @@ dependencies:
   shared_preferences: ^2.2.2
   uuid: ^4.1.0
   intl: ^0.20.2
+  url_launcher: ^6.3.1
 
 dev_dependencies:
   flutter_test:
@@ -64,4 +64,3 @@ flutter:
   assets:
     - assets/data/clientes.json
     - assets/data/productos.json
- 
