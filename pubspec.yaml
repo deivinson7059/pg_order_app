@@ -1,0 +1,67 @@
+name: pg_order_app
+description: "Aplicación para gestión de pedidos en ruta"
+
+
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.0
+
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  equatable: ^2.0.5
+  get_it: ^7.6.4
+  # Gestión de estados
+  bloc: ^9.0.0
+  flutter_bloc: ^9.1.1
+  
+  # Base de datos local
+  sqflite: ^2.3.0
+  path: ^1.8.3
+  
+  # HTTP y API
+  dio: ^5.3.2
+  retrofit: ^4.0.3
+  json_annotation: ^4.8.1
+  
+  # Sockets
+  socket_io_client: ^3.1.2
+  
+  # Mapas y ubicación
+  google_maps_flutter: ^2.5.0
+  geolocator: ^14.0.0
+  location: ^8.0.0
+  
+  # Sincronización automática
+  cron: ^0.6.2
+  workmanager: ^0.5.2
+  
+  # Utils
+  connectivity_plus: ^6.1.4
+  shared_preferences: ^2.2.2
+  uuid: ^4.1.0
+  intl: ^0.20.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  
+  flutter_lints: ^5.0.0
+
+  build_runner: ^2.4.7
+  json_serializable: ^6.7.1
+  retrofit_generator: ^9.2.0 
+
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/data/clientes.json
+    - assets/data/productos.json
+ 
